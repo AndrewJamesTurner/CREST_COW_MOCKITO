@@ -21,7 +21,7 @@ $GRADLE_HOME/gradle jacocoTestReport 2>&1 >/dev/null
 
 
 
-read coverage <<< $(awk -F"," '{x+=$7;y+=$6}END{print x/y}' ./build/reports/jacoco/test/jacocoTestReport.csv )
+read coverage <<< $(awk -F"," '{x+=$7;y+=$6}END{print x/(x+y)}' ./build/reports/jacoco/test/jacocoTestReport.csv )
 
 #NAME=$(echo $@ | tr -d ' ') 
 echo $coverage > $CURRENT_FOLDER/sol.txt
