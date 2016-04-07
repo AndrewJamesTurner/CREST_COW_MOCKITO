@@ -64,8 +64,7 @@ test {
     }
 
     filter {
- includeTestsMatching "org.mockito.ArgumentCaptorTest"
- includeTestsMatching "org.mockito.AnnotationsAreCopiedFromMockedTypeTest"
+ includeTestsMatching "org.mockito.internal.configuration.MockInjectionTest.should_not_allow_null_on_mocks"
 
  
     }

@@ -14,7 +14,8 @@ do
     sed -i "/filter/a \ includeTestsMatching \"$var\"" build.gradle
 done
 
-$GRADLE_HOME/gradle clean 2>&1 >/dev/null
+rm -rf ./build/jacoco
+
 $GRADLE_HOME/gradle test 2>&1 >/dev/null
 $GRADLE_HOME/gradle jacocoTestReport 2>&1 >/dev/null
 
