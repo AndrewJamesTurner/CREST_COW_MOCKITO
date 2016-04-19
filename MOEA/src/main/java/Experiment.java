@@ -27,7 +27,7 @@ public class Experiment {
 
 	public void run() {
 
-		/*NondominatedPopulation result = new Executor()
+		NondominatedPopulation result = new Executor()
 		.withAlgorithm("NSGAII")
 		.withProblemClass(FitnessFunction.class)
 		//.withMaxEvaluations(100000)
@@ -39,8 +39,8 @@ public class Experiment {
 		displayResults(result);
 
 		saveResults(result);
-		*/
-		System.out.println(defaultPerfomance());
+
+		System.out.println("defaultPerfomance: " + defaultPerfomance());
 	}
 
 	String defaultPerfomance() {
