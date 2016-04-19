@@ -16,6 +16,7 @@ public class Experiment {
 	private String name;
 	private int time; // mins
 	private static String[] tests = new String[420];
+	private static String fileName = "./resources/mockitousagePackageSubsetTests.csv";
 
 	public Experiment(String name, int time) {
 		this.name = name;
@@ -26,7 +27,7 @@ public class Experiment {
 
 	public void run() {
 
-		NondominatedPopulation result = new Executor()
+		/*NondominatedPopulation result = new Executor()
 		.withAlgorithm("NSGAII")
 		.withProblemClass(FitnessFunction.class)
 		//.withMaxEvaluations(100000)
@@ -38,6 +39,52 @@ public class Experiment {
 		displayResults(result);
 
 		saveResults(result);
+		*/
+		System.out.println(defaultPerfomance());
+	}
+
+	String defaultPerfomance() {
+
+		String appliedTests = "";
+
+		for (int i = 0 ; i < tests.length; i++ ) {
+			appliedTests += (tests[i] + " ");
+		}
+
+		String command = "./ff.sh " + appliedTests;
+
+		try {
+
+			Runtime r = Runtime.getRuntime();
+			Process p = r.exec(command);
+
+			p.waitFor();
+			BufferedReader b = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+			String line = b.readLine();
+			String lastLine = line;
+
+			while (line != null) {
+				lastLine = line;
+				line = b.readLine();
+			}
+
+			b.close();
+
+			String[] qwerty = lastLine.split(", ");
+			double notCovered = 1 - Double.parseDouble(qwerty[0]);
+			double time = Double.parseDouble(qwerty[1]);
+
+			return notCovered + "," + time;
+		}
+		catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
+		catch (InterruptedException e) {
+			System.out.println("InterruptedException");
+		}
+
+		return "";
 	}
 
 
@@ -57,13 +104,23 @@ public class Experiment {
 		String dir = "./Experiments/" + name + "/";
 		new File(dir).mkdirs();
 
-		for (Solution solution : result) {
+		try {
 
-			try {
+			PrintWriter writerDefault = new PrintWriter(dir + "defaultBehavior.txt");
+			PrintWriter writerSummary = new PrintWriter(dir + "summary.txt", "UTF-8");
+
+			writerDefault.println("Not Covered,Time");
+			writerDefault.println(defaultPerfomance());
+
+			writerSummary.println("Not Covered,Time");
+
+			for (Solution solution : result) {
 
 				PrintWriter writer = new PrintWriter(dir + "solution_" + solution.getObjective(0) + "_" + solution.getObjective(1) + ".txt", "UTF-8");
+				writerSummary.println(solution.getObjective(0) + "," + solution.getObjective(1));
 
-				for (int i = 0 ; i < solution.getNumberOfVariables(); i++ )
+
+				for (int i = 0 ; i < solution.getNumberOfVariables(); i++ ) {
 
 					if (solution.getVariable(i) instanceof BinaryVariable) {
 
@@ -81,9 +138,11 @@ public class Experiment {
 						}
 					}
 
+					writer.close();
+				}
 			}
 
-			writer.close();
+			writerSummary.println("default behaviour: " + defaultPerfomance());
 		}
 		catch (UnsupportedEncodingException e) {
 
@@ -92,29 +151,29 @@ public class Experiment {
 
 		}
 	}
-}
 
 
 
-private void loadTests() {
 
-	String fileName = "./resources/mockitousagePackageSubsetTests.csv";
 
-	try {
-		FileReader fileReader = new FileReader(fileName);
-		BufferedReader bufferedReader = new BufferedReader(fileReader);
 
-		int index = 0;
-		String line = bufferedReader.readLine();
+	private void loadTests() {
 
-		while ( line  != null ) {
-			String[] test = line.split(",");
-			tests[index++] = test[0];
-			line = bufferedReader.readLine();
+		try {
+			FileReader fileReader = new FileReader(fileName);
+			BufferedReader bufferedReader = new BufferedReader(fileReader);
+
+			int index = 0;
+			String line = bufferedReader.readLine();
+
+			while ( line  != null ) {
+				String[] test = line.split(",");
+				tests[index++] = test[0];
+				line = bufferedReader.readLine();
+			}
+		}
+		catch (IOException ex) {
+			System.out.println("Could not load " + fileName);
 		}
 	}
-	catch (IOException ex) {
-		System.out.println("Could not load " + fileName);
-	}
-}
 }

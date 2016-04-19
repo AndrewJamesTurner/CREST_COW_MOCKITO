@@ -15,7 +15,7 @@ public class FitnessFunction extends AbstractProblem {
 
 	private String[] tests = new String[numTests];
 
-	public FitnessFunction() {
+	public FitnessFunction(String fileName) {
 
 		super(numTests, 2, 1);
 
