@@ -1,0 +1,28 @@
+
+plugins {
+  id 'java'
+  id 'application'
+  id 'com.github.johnrengelman.shadow' version '1.2.3' // grdle shadowJar
+}
+
+
+mainClassName = "Main"
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile 'org.moeaframework:moeaframework:2.9'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'Main'
+    }
+}
+
+test {
+	maxParallelForks = 5
+	forkEvery = 50
+}
