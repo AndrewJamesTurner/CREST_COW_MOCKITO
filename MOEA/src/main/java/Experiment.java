@@ -9,7 +9,8 @@ import org.moeaframework.util.progress.ProgressListener;
 import org.moeaframework.util.progress.ProgressEvent;
 import org.moeaframework.core.variable.BinaryVariable;
 import org.moeaframework.core.variable.BinaryIntegerVariable;
-
+import org.moeaframework.core.Algorithm;
+import org.moeaframework.core.TerminationCondition;
 
 public class Experiment {
 
@@ -17,12 +18,17 @@ public class Experiment {
 	private int time; // mins
 	private static String[] tests = new String[420];
 	private static String fileName = "./resources/mockitousagePackageSubsetTests.csv";
+	private String dir;
 
 	public Experiment(String name, int time) {
+
 		this.name = name;
 		this.time = time;
 
 		loadTests();
+
+		dir = "./Experiments/" + name + "/";
+		new File(dir).mkdirs();
 	}
 
 	public void run() {
@@ -30,10 +36,10 @@ public class Experiment {
 		NondominatedPopulation result = new Executor()
 		.withAlgorithm("NSGAII")
 		.withProblemClass(FitnessFunction.class)
-		//.withMaxEvaluations(100000)
 		.withMaxTime(1000 * 60 * this.time)
 		.withProgressListener(new MyListener())
-		.withProperty("populationSize", 10)
+		//.withProperty("populationSize", 10)
+		.withTerminationCondition(new MyTerminationCondition())
 		.run();
 
 		displayResults(result);
@@ -43,6 +49,7 @@ public class Experiment {
 		System.out.println("defaultPerfomance: " + defaultPerfomance());
 	}
 
+	// performance form using all of the tests
 	String defaultPerfomance() {
 
 		String appliedTests = "";
@@ -97,12 +104,11 @@ public class Experiment {
 		for (Solution solution : result) {
 			System.out.println(solution.getObjective(0) + ", " + solution.getObjective(1));
 		}
+
+		System.out.println();
 	}
 
 	private void saveResults(NondominatedPopulation result) {
-
-		String dir = "./Experiments/" + name + "/";
-		new File(dir).mkdirs();
 
 		try {
 
@@ -111,6 +117,7 @@ public class Experiment {
 
 			writerDefault.println("Not Covered,Time");
 			writerDefault.println(defaultPerfomance());
+			writerDefault.close();
 
 			writerSummary.println("Not Covered,Time");
 
@@ -119,31 +126,32 @@ public class Experiment {
 				PrintWriter writer = new PrintWriter(dir + "solution_" + solution.getObjective(0) + "_" + solution.getObjective(1) + ".txt", "UTF-8");
 				writerSummary.println(solution.getObjective(0) + "," + solution.getObjective(1));
 
-
 				for (int i = 0 ; i < solution.getNumberOfVariables(); i++ ) {
 
-					if (solution.getVariable(i) instanceof BinaryVariable) {
+					boolean test = ((BinaryVariable)solution.getVariable(i)).get(0);
 
-						boolean test = ((BinaryVariable)solution.getVariable(i)).get(0);
-
-						if (test) {
-							writer.println(tests[i]);
-						}
+					if (test) {
+						writer.println(tests[i]);
 					}
-					else {
-						int test = ((BinaryIntegerVariable)solution.getVariable(i)).getValue();
-
-						if (test >= 0) {
-							writer.println(tests[test]);
-						}
-					}
-
-					writer.close();
 				}
+
+				writer.close();
 			}
 
-			writerSummary.println("default behaviour: " + defaultPerfomance());
+			writerSummary.println("\ndefault behavior\n" + defaultPerfomance());
+
+			writerSummary.close();
+
+			// save all the tests
+			PrintWriter writerAllTests = new PrintWriter(dir + "allTests.txt");
+
+			for (int i = 0 ; i < tests.length; i++ ) {
+				writerAllTests.println(tests[i]);
+			}
+
+			writerAllTests.close();
 		}
+
 		catch (UnsupportedEncodingException e) {
 
 		}
@@ -151,10 +159,6 @@ public class Experiment {
 
 		}
 	}
-
-
-
-
 
 
 	private void loadTests() {
@@ -174,6 +178,62 @@ public class Experiment {
 		}
 		catch (IOException ex) {
 			System.out.println("Could not load " + fileName);
+		}
+	}
+
+
+	public class MyTerminationCondition implements TerminationCondition {
+
+		private NondominatedPopulation previousResults = null;
+
+		public void initialize(Algorithm algorithm) {
+
+		}
+
+		public boolean shouldTerminate(Algorithm algorithm) {
+
+			if (previousResults == null) {
+				previousResults = algorithm.getResult();
+				return false;
+			}
+
+			NondominatedPopulation currentResults = algorithm.getResult();
+
+			// population has changed
+			if (currentResults.size() != previousResults.size()) {
+				logProgress(algorithm);
+				previousResults = algorithm.getResult();
+				return false;
+			}
+			else {
+				for (int i = 0; i < currentResults.size(); i++) {
+					for (int j = 0; j < currentResults.get(i).getNumberOfObjectives(); j++) {
+
+						if (currentResults.get(i).getObjective(j) != previousResults.get(i).getObjective(j)) {
+							logProgress(algorithm);
+							previousResults = algorithm.getResult();
+							return false;
+						}
+					}
+				}
+			}
+
+			previousResults = algorithm.getResult();
+			return false;
+		}
+
+
+		private void logProgress(Algorithm algorithm) {
+
+			try {
+				String filename = dir + "evaluationsBetweenImproovmentsToTheFitness.txt";
+				FileWriter fw = new FileWriter(filename, true); //the true will append the new data
+				fw.write(algorithm.getNumberOfEvaluations() + "\n");
+				fw.close();
+			}
+			catch (IOException ioe) {
+				System.err.println("IOException: " + ioe.getMessage());
+			}
 		}
 	}
 }

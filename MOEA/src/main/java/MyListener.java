@@ -9,7 +9,7 @@ class MyListener implements ProgressListener {
 
 		int elapsedEvals = event.getCurrentNFE();
 		int maxEvals = event.getMaxNFE();
-		System.out.println(elapsedEvals);
+		System.out.println("Eval: " + elapsedEvals);
 
 	}
 

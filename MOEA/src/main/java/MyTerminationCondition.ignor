@@ -1,0 +1,59 @@
+import org.moeaframework.core.TerminationCondition;
+import org.moeaframework.core.Algorithm;
+import org.moeaframework.core.NondominatedPopulation;
+
+public class MyTerminationCondition implements TerminationCondition {
+
+	private NondominatedPopulation previousResults = null;
+
+	public void initialize(Algorithm algorithm) {
+
+	}
+
+	public boolean shouldTerminate(Algorithm algorithm) {
+
+		if (previousResults == null) {
+			previousResults = algorithm.getResult();
+			return false;
+		}
+
+		NondominatedPopulation currentResults = algorithm.getResult();
+
+		// population has changed
+		if (currentResults.size() != previousResults.size()) {
+			logProgress(algorithm);
+			return false;
+		}
+		else {
+			for (int i = 0; i < currentResults.size(); i++) {
+				for (int j = 0; j < currentResults.get(i).getNumberOfObjectives(); j++) {
+
+
+					if (currentResults.get(i).getObjective(j) != previousResults.get(i).getObjective(j)) {
+						logProgress(algorithm);
+						return false;
+					}
+				}
+			}
+		}
+
+		// set previous results
+		previousResults = algorithm.getResult();
+
+		return false;
+	}
+
+
+	private void logProgress(Algorithm algorithm) {
+
+		try {
+			Files.write(Paths.get("myfile.txt"), "the text".getBytes(), StandardOpenOption.APPEND);
+		}
+		catch (IOException e) {
+			//exception handling left as an exercise for the reader
+		}
+
+		System.out.println(algorithm.getNumberOfEvaluations());
+	}
+
+}
