@@ -38,7 +38,7 @@ public class Experiment {
 		.withProblemClass(FitnessFunction.class)
 		.withMaxTime(1000 * 60 * this.time)
 		.withProgressListener(new MyListener())
-		//.withProperty("populationSize", 10)
+		.withProperty("populationSize", 10)
 		.withTerminationCondition(new MyTerminationCondition())
 		.run();
 
