@@ -61,12 +61,7 @@ test {
     }
 
  filter {
- includeTestsMatching 'src'
- includeTestsMatching 'resources'
- includeTestsMatching 'ff.sh'
- includeTestsMatching 'Experiments'
- includeTestsMatching 'build.gradle'
- includeTestsMatching 'build'
+
  
     }
 
