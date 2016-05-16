@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>InvocationContainerImpl.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">mockito</a> &gt; <a href="index.source.html" class="el_package">org.mockito.internal.stubbing</a> &gt; <span class="el_source">InvocationContainerImpl.java</span></div><h1>InvocationContainerImpl.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2007 Mockito contributors
+ * This program is made available under the terms of the MIT License.
+ */
+package org.mockito.internal.stubbing;
+
+import org.mockito.internal.invocation.InvocationMatcher;
+import org.mockito.internal.invocation.StubInfoImpl;
+import org.mockito.internal.progress.MockingProgress;
+import org.mockito.internal.stubbing.answers.AnswersValidator;
+import org.mockito.internal.verification.DefaultRegisteredInvocations;
+import org.mockito.internal.verification.RegisteredInvocations;
+import org.mockito.internal.verification.SingleRegisteredInvocation;
+import org.mockito.invocation.Invocation;
+import org.mockito.mock.MockCreationSettings;
+import org.mockito.stubbing.Answer;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+<span class="nc bnc" id="L23" title="All 2 branches missed.">@SuppressWarnings(&quot;unchecked&quot;)</span>
+public class InvocationContainerImpl implements InvocationContainer, Serializable {
+
+    private static final long serialVersionUID = -5334301962749537177L;
+<span class="nc" id="L27">    private final LinkedList&lt;StubbedInvocationMatcher&gt; stubbed = new LinkedList&lt;StubbedInvocationMatcher&gt;();</span>
+    private final MockingProgress mockingProgress;
+<span class="nc" id="L29">    private final List&lt;Answer&gt; answersForStubbing = new ArrayList&lt;Answer&gt;();</span>
+    private final RegisteredInvocations registeredInvocations;
+
+    private InvocationMatcher invocationForStubbing;
+
+<span class="nc" id="L34">    public InvocationContainerImpl(MockingProgress mockingProgress, MockCreationSettings mockSettings) {</span>
+<span class="nc" id="L35">        this.mockingProgress = mockingProgress;</span>
+<span class="nc" id="L36">        this.registeredInvocations = createRegisteredInvocations(mockSettings);</span>
+<span class="nc" id="L37">    }</span>
+
+    public void setInvocationForPotentialStubbing(InvocationMatcher invocation) {
+<span class="nc" id="L40">        registeredInvocations.add(invocation.getInvocation());</span>
+<span class="nc" id="L41">        this.invocationForStubbing = invocation;</span>
+<span class="nc" id="L42">    }</span>
+
+    public void resetInvocationForPotentialStubbing(InvocationMatcher invocationMatcher) {
+<span class="nc" id="L45">        this.invocationForStubbing = invocationMatcher;</span>
+<span class="nc" id="L46">    }</span>
+
+    public void addAnswer(Answer answer) {
+<span class="nc" id="L49">        registeredInvocations.removeLast();</span>
+<span class="nc" id="L50">        addAnswer(answer, false);</span>
+<span class="nc" id="L51">    }</span>
+
+    public void addConsecutiveAnswer(Answer answer) {
+<span class="nc" id="L54">        addAnswer(answer, true);</span>
+<span class="nc" id="L55">    }</span>
+
+    public void addAnswer(Answer answer, boolean isConsecutive) {
+<span class="nc" id="L58">        Invocation invocation = invocationForStubbing.getInvocation();</span>
+<span class="nc" id="L59">        mockingProgress.stubbingCompleted(invocation);</span>
+<span class="nc" id="L60">        AnswersValidator answersValidator = new AnswersValidator();</span>
+<span class="nc" id="L61">        answersValidator.validate(answer, invocation);</span>
+
+<span class="nc" id="L63">        synchronized (stubbed) {</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">            if (isConsecutive) {</span>
+<span class="nc" id="L65">                stubbed.getFirst().addAnswer(answer);</span>
+            } else {
+<span class="nc" id="L67">                stubbed.addFirst(new StubbedInvocationMatcher(invocationForStubbing, answer));</span>
+            }
+<span class="nc" id="L69">        }</span>
+<span class="nc" id="L70">    }</span>
+
+    Object answerTo(Invocation invocation) throws Throwable {
+<span class="nc" id="L73">        return findAnswerFor(invocation).answer(invocation);</span>
+    }
+
+    public StubbedInvocationMatcher findAnswerFor(Invocation invocation) {
+<span class="nc" id="L77">        synchronized (stubbed) {</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            for (StubbedInvocationMatcher s : stubbed) {</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                if (s.matches(invocation)) {</span>
+<span class="nc" id="L80">                    s.markStubUsed(invocation);</span>
+<span class="nc" id="L81">                    invocation.markStubbed(new StubInfoImpl(s));</span>
+<span class="nc" id="L82">                    return s;</span>
+                }
+<span class="nc" id="L84">            }</span>
+<span class="nc" id="L85">        }</span>
+
+<span class="nc" id="L87">        return null;</span>
+    }
+
+    public void addAnswerForVoidMethod(Answer answer) {
+<span class="nc" id="L91">        answersForStubbing.add(answer);</span>
+<span class="nc" id="L92">    }</span>
+
+    public void setAnswersForStubbing(List&lt;Answer&gt; answers) {
+<span class="nc" id="L95">        answersForStubbing.addAll(answers);</span>
+<span class="nc" id="L96">    }</span>
+
+    public boolean hasAnswersForStubbing() {
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        return !answersForStubbing.isEmpty();</span>
+    }
+
+    public boolean hasInvocationForPotentialStubbing() {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        return !registeredInvocations.isEmpty();</span>
+    }
+
+    public void setMethodForStubbing(InvocationMatcher invocation) {
+<span class="nc" id="L107">        invocationForStubbing = invocation;</span>
+<span class="nc bnc" id="L108" title="All 4 branches missed.">        assert hasAnswersForStubbing();</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        for (int i = 0; i &lt; answersForStubbing.size(); i++) {</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            addAnswer(answersForStubbing.get(i), i != 0);</span>
+        }
+<span class="nc" id="L112">        answersForStubbing.clear();</span>
+<span class="nc" id="L113">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L117">        return &quot;invocationForStubbing: &quot; + invocationForStubbing;</span>
+    }
+
+    public List&lt;Invocation&gt; getInvocations() {
+<span class="nc" id="L121">        return registeredInvocations.getAll();</span>
+    }
+
+    public void clearInvocations() {
+<span class="nc" id="L125">        registeredInvocations.clear();</span>
+<span class="nc" id="L126">    }</span>
+
+    public List&lt;StubbedInvocationMatcher&gt; getStubbedInvocations() {
+<span class="nc" id="L129">        return stubbed;</span>
+    }
+
+    public Object invokedMock() {
+<span class="nc" id="L133">        return invocationForStubbing.getInvocation().getMock();</span>
+    }
+    
+    public InvocationMatcher getInvocationForStubbing() {
+<span class="nc" id="L137">        return invocationForStubbing;</span>
+    }
+
+    private RegisteredInvocations createRegisteredInvocations(MockCreationSettings mockSettings) {
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        return mockSettings.isStubOnly()</span>
+          ? new SingleRegisteredInvocation()
+          : new DefaultRegisteredInvocations();
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

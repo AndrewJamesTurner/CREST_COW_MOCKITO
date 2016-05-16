@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MockBytecodeGenerator.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">mockito</a> &gt; <a href="index.source.html" class="el_package">org.mockito.internal.creation.bytebuddy</a> &gt; <span class="el_source">MockBytecodeGenerator.java</span></div><h1>MockBytecodeGenerator.java</h1><pre class="source lang-java linenums">package org.mockito.internal.creation.bytebuddy;
+
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.modifier.SynchronizationState;
+import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.dynamic.MethodTransformer;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
+import net.bytebuddy.dynamic.loading.MultipleParentClassLoader;
+import net.bytebuddy.dynamic.scaffold.TypeValidation;
+import net.bytebuddy.implementation.FieldAccessor;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.attribute.MethodAttributeAppender;
+import net.bytebuddy.matcher.ElementMatcher;
+import org.mockito.internal.creation.bytebuddy.ByteBuddyCrossClassLoaderSerializationSupport.CrossClassLoaderSerializableMock;
+import org.mockito.internal.creation.bytebuddy.MockMethodInterceptor.DispatcherDefaultingToRealMethod;
+import org.mockito.internal.creation.bytebuddy.MockMethodInterceptor.MockAccess;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Random;
+
+import static net.bytebuddy.description.modifier.Visibility.PRIVATE;
+import static net.bytebuddy.implementation.MethodDelegation.to;
+import static net.bytebuddy.matcher.ElementMatchers.*;
+
+class MockBytecodeGenerator {
+
+    private final ByteBuddy byteBuddy;
+    private final Random random;
+
+<span class="fc" id="L32">    public MockBytecodeGenerator() {</span>
+<span class="fc" id="L33">        byteBuddy = new ByteBuddy().with(TypeValidation.DISABLED);</span>
+<span class="fc" id="L34">        random = new Random();</span>
+<span class="fc" id="L35">    }</span>
+
+    public &lt;T&gt; Class&lt;? extends T&gt; generateMockClass(MockFeatures&lt;T&gt; features) {
+<span class="fc" id="L38">        DynamicType.Builder&lt;T&gt; builder =</span>
+<span class="fc" id="L39">                byteBuddy.subclass(features.mockedType)</span>
+<span class="fc" id="L40">                         .name(nameFor(features.mockedType))</span>
+<span class="fc" id="L41">                         .ignoreAlso(isGroovyMethod())</span>
+<span class="fc" id="L42">                         .annotateType(features.mockedType.getAnnotations())</span>
+<span class="fc" id="L43">                         .implement(new ArrayList&lt;Type&gt;(features.interfaces))</span>
+<span class="fc" id="L44">                         .method(any())</span>
+<span class="fc" id="L45">                           .intercept(MethodDelegation.to(DispatcherDefaultingToRealMethod.class))</span>
+<span class="fc" id="L46">                           .transform(MethodTransformer.Simple.withModifiers(SynchronizationState.PLAIN))</span>
+<span class="fc" id="L47">                           .attribute(MethodAttributeAppender.ForInstrumentedMethod.INCLUDING_RECEIVER)</span>
+<span class="fc" id="L48">                         .serialVersionUid(42L)</span>
+<span class="fc" id="L49">                         .defineField(&quot;mockitoInterceptor&quot;, MockMethodInterceptor.class, PRIVATE)</span>
+<span class="fc" id="L50">                         .implement(MockAccess.class)</span>
+<span class="fc" id="L51">                           .intercept(FieldAccessor.ofBeanProperty())</span>
+<span class="fc" id="L52">                         .method(isHashCode())</span>
+<span class="fc" id="L53">                           .intercept(to(MockMethodInterceptor.ForHashCode.class))</span>
+<span class="fc" id="L54">                         .method(isEquals())</span>
+<span class="fc" id="L55">                           .intercept(to(MockMethodInterceptor.ForEquals.class));</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">        if (features.crossClassLoaderSerializable) {</span>
+<span class="nc" id="L57">            builder = builder.implement(CrossClassLoaderSerializableMock.class)</span>
+<span class="nc" id="L58">                             .intercept(to(MockMethodInterceptor.ForWriteReplace.class));</span>
+        }
+<span class="fc" id="L60">        return builder.make()</span>
+<span class="fc" id="L61">                      .load(new MultipleParentClassLoader.Builder()</span>
+<span class="fc" id="L62">                              .append(features.mockedType)</span>
+<span class="fc" id="L63">                              .append(features.interfaces)</span>
+<span class="fc" id="L64">                              .append(MultipleParentClassLoader.class.getClassLoader())</span>
+<span class="fc" id="L65">                              .append(Thread.currentThread().getContextClassLoader())</span>
+<span class="fc" id="L66">                              .filter(isBootstrapClassLoader())</span>
+<span class="fc" id="L67">                              .build(), ClassLoadingStrategy.Default.INJECTION)</span>
+<span class="fc" id="L68">                      .getLoaded();</span>
+    }
+
+    private static ElementMatcher&lt;MethodDescription&gt; isGroovyMethod() {
+<span class="fc" id="L72">        return isDeclaredBy(named(&quot;groovy.lang.GroovyObjectSupport&quot;));</span>
+    }
+
+    // TODO inspect naming strategy (for OSGI, signed package, java.* (and bootstrap classes), etc...)
+    private String nameFor(Class&lt;?&gt; type) {
+<span class="fc" id="L77">        String typeName = type.getName();</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        if (isComingFromJDK(type)</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">                || isComingFromSignedJar(type)</span>
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">                || isComingFromSealedPackage(type)) {</span>
+<span class="fc" id="L81">            typeName = &quot;codegen.&quot; + typeName;</span>
+        }
+<span class="fc" id="L83">        return String.format(&quot;%s$%s$%d&quot;, typeName, &quot;MockitoMock&quot;, Math.abs(random.nextInt()));</span>
+    }
+
+    private boolean isComingFromJDK(Class&lt;?&gt; type) {
+        // Comes from the manifest entry :
+        // Implementation-Title: Java Runtime Environment
+        // This entry is not necessarily present in every jar of the JDK
+<span class="pc bpc" id="L90" title="1 of 4 branches missed.">        return type.getPackage() != null &amp;&amp; &quot;Java Runtime Environment&quot;.equalsIgnoreCase(type.getPackage().getImplementationTitle())</span>
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">                || type.getName().startsWith(&quot;java.&quot;)</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">                || type.getName().startsWith(&quot;javax.&quot;);</span>
+    }
+
+    private boolean isComingFromSealedPackage(Class&lt;?&gt; type) {
+<span class="pc bpc" id="L96" title="2 of 4 branches missed.">        return type.getPackage() != null &amp;&amp; type.getPackage().isSealed();</span>
+    }
+
+    private boolean isComingFromSignedJar(Class&lt;?&gt; type) {
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">        return type.getSigners() != null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>
