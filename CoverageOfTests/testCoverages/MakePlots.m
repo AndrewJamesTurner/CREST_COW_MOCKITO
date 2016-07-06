@@ -48,7 +48,7 @@ all = all(2:end, 3:4);
 sol = sol(2:end, 3:4);
 
 
-class = find(strcmp(unequeClasses, 'AtMost'));
+class = find(strcmp(unequeClasses, 'AtLeastXNumberOfInvocationsChecker')); % AtMost AtLeastXNumberOfInvocationsChecker
 class = class(1);
 
 lines = all(lineStarts(class):lineStarts(class+1) -1,1);
@@ -66,6 +66,8 @@ b = bar( lines, coverage);
 
 set(b(1),'facecolor','red');
 set(b(2),'facecolor','blue');
+
+legend('All Tests', 'Subset', 'location', 'northeast')
 
 %bar( lines, coverageAll, 'b');
 %bar( coverageAll, 'b');

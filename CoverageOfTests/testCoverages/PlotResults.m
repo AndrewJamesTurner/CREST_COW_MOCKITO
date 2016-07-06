@@ -59,6 +59,8 @@ hold off;
 xlabel('Line In File', 'FontSize', fontSize)
 ylabel('Times Covered', 'FontSize', fontSize)
 
+legend('All Tests', 'Subset', 'location', 'northeast')
+
 set(gca,'fontsize',fontSize)
 
 %print -dpdf -color className{class}
